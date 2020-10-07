@@ -1,0 +1,199 @@
+package http02
+
+import (
+	"bytes"
+	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
+	"io"
+	"io/ioutil"
+	"net"
+	"net/http"
+	"nf-simulator/config"
+	"nf-simulator/nflogger"
+	"nf-simulator/testconfig"
+	"strings"
+	"time"
+)
+
+//ResponseAttributes - contains
+//1. Response Code
+//2. Response Header
+//3. Response body
+type ResponseAttributes struct {
+	ResponseCode int
+	Header       http.Header
+	Body         string
+}
+
+func createClientTLSConfig() (*tls.Config, error) {
+	var rootCAs *x509.CertPool
+	var clientTLScertificates tls.Certificate
+	var err error
+	trustedCAs := testconfig.TestConf.Client.TLSConfig.TrustedCAs
+	certificateFile := testconfig.TestConf.Client.TLSConfig.CertificateFile
+	keyFile := testconfig.TestConf.Client.TLSConfig.KeyFile
+	if trustedCAs == nil {
+		rootCAs = nil
+	} else {
+		rootCAs = x509.NewCertPool()
+		for _, ca := range trustedCAs {
+			caContent, err := ioutil.ReadFile(ca)
+			if err != nil {
+				nflogger.LogError(err.Error())
+				nflogger.LogExit()
+				return nil, err
+			}
+			ok := rootCAs.AppendCertsFromPEM(caContent)
+			if !ok {
+				err = errors.New("Failed to Parse CA certificates")
+				nflogger.LogError(err.Error())
+				nflogger.LogExit()
+				return nil, err
+			}
+		}
+	}
+
+	if certificateFile != "" && keyFile != "" {
+		clientTLScertificates, err = tls.LoadX509KeyPair(certificateFile, keyFile)
+		if err != nil {
+			nflogger.LogError(err.Error())
+			nflogger.LogExit()
+			return nil, err
+		}
+	}
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true,
+		RootCAs:            rootCAs,
+		Certificates:       []tls.Certificate{clientTLScertificates},
+	}
+	nflogger.LogExit()
+	return tlsConfig, nil
+}
+
+//CreateH2Client creates HTTP2 request and returns the created instance
+func CreateH2Client() (http.Client, error) {
+        var client http.Client
+	nflogger.LogEntry()
+	nflogger.LogInfo("Creating client instance")
+	//localAddr, err := net.ResolveIPAddr("ip", ip)
+	//customerror.RaisePanic(err)
+	/*
+		localTCPAddr := net.TCPAddr{
+			IP:   localAddr.IP,
+			Port: port,
+		}
+	*/
+	dialer := &net.Dialer{
+		//LocalAddr: &localTCPAddr,
+		Timeout:   config.Timeout * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+	if testconfig.TestConf.Client.EnableTLS {
+		tlsConfig, err := createClientTLSConfig()
+		if err != nil {
+			nflogger.LogError(err.Error())
+			nflogger.LogExit()
+			return http.Client{}, err
+		}
+		client = http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig:tlsConfig ,
+				Dial: dialer.Dial,
+			},
+		}
+	} else {
+		client = http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: nil ,
+				Dial: dialer.Dial,
+			},
+		}
+	}
+	nflogger.LogInfo("Created client instance")
+	nflogger.LogExit()
+	return client, nil
+}
+
+//SendRequest sends the request to the URL given
+func SendRequest(client http.Client, method string, url string, header http.Header, body []byte, queryParams map[string]string, timeout time.Duration) (ResponseAttributes, error) {
+	nflogger.LogEntry()
+	nflogger.LogInfo("Sending", method, "request to URI", url)
+	req, err := http.NewRequest(method, url, bytes.NewReader(body))
+	if err != nil {
+		nflogger.LogError(err.Error())
+		nflogger.LogExit()
+		return ResponseAttributes{}, err
+	}
+	query := req.URL.Query()
+	if queryParams != nil {
+		for key, value := range queryParams {
+			query.Add(key, value)
+		}
+	}
+	if config.ProductConfig.Encoding.DisableFormEncoding == true {
+		req.URL.RawQuery = strings.ReplaceAll(query.Encode(), "+", "%20")
+	} else {
+		req.URL.RawQuery = query.Encode()
+	}
+	if header != nil {
+		for key, value := range header {
+			//TODO Use req.Header.Set
+			req.Header[key] = value
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*1000*time.Millisecond)
+	defer cancel()
+	req = req.WithContext(ctx)
+
+	response, err := client.Do(req)
+	if err != nil {
+		nflogger.LogError(err.Error())
+		nflogger.LogExit()
+		return ResponseAttributes{}, err
+	}
+
+	respStatusCode := getResponseStatusCode(response)
+	respHeader := getResponseHeader(response)
+	respBody, err := getResponseBody(response)
+	if err != nil {
+		nflogger.LogError(err.Error())
+		nflogger.LogExit()
+		return ResponseAttributes{}, err
+	}
+	nflogger.LogInfo("Status code of the received message -", respStatusCode)
+	nflogger.LogExit()
+	return ResponseAttributes{ResponseCode: respStatusCode, Header: respHeader, Body: respBody}, nil
+}
+
+//getResponseStatusCode fetches the header from http response and
+//returns
+func getResponseStatusCode(response *http.Response) int {
+	nflogger.LogEntry()
+	nflogger.LogExit()
+	return response.StatusCode
+}
+
+//getResponseHeader fetches the header from http response and
+//returns
+func getResponseHeader(response *http.Response) http.Header {
+	nflogger.LogEntry()
+	nflogger.LogExit()
+	return response.Header
+}
+
+//getResponseBody fetches the body from http response and
+//returns
+func getResponseBody(response *http.Response) (string, error) {
+	nflogger.LogEntry()
+	body, err := ioutil.ReadAll(io.Reader(response.Body))
+	defer response.Body.Close()
+	if err != nil {
+		nflogger.LogError(err.Error())
+		nflogger.LogExit()
+		return "", err
+	}
+	nflogger.LogExit()
+	return string(body), nil
+}
