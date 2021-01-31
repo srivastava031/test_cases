@@ -1,0 +1,41 @@
+10c10
+< package swagger_server
+---
+> package swagger
+14d13
+< 	wrapper "unicorn/swagger/swagger_wrapper"
+18c17,18
+< 	wrapper.WrapperListSUTs(w, r)
+---
+> 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+> 	w.WriteHeader(http.StatusOK)
+22c22,23
+< 	wrapper.WrapperListTestCases(w, r)
+---
+> 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+> 	w.WriteHeader(http.StatusOK)
+26c27,28
+< 	wrapper.WrapperListTestSuites(w, r)
+---
+> 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+> 	w.WriteHeader(http.StatusOK)
+30c32,33
+< 	wrapper.WrapperStatsHandler(w, r)
+---
+> 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+> 	w.WriteHeader(http.StatusOK)
+34c37,38
+< 	wrapper.WrapperSutExecutionHandler(w, r)
+---
+> 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+> 	w.WriteHeader(http.StatusOK)
+38c42,43
+< 	wrapper.WrapperTestcaseExecutionHandler(w, r)
+---
+> 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+> 	w.WriteHeader(http.StatusOK)
+42c47,48
+< 	wrapper.WrapperTestsuiteExecutionHandler(w, r)
+---
+> 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+> 	w.WriteHeader(http.StatusOK)
