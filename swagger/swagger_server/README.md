@@ -1,4 +1,4 @@
-# Go API Server for unicorn-interface
+# Go API Server for swagger
 
 This is to provide rest interface to Unicorn. The rest API's can be used to execute and manage the tests. 
 
@@ -13,6 +13,7 @@ To see how to make this your own, look here:
 [README](https://github.com/swagger-api/swagger-codegen/blob/master/README.md)
 
 - API version: 1.0.0
+- Build date: 2021-01-31T14:55:21.930Z[GMT]
 
 
 ### Running the server
