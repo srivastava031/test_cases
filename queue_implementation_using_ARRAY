@@ -1,0 +1,74 @@
+package main
+
+import "fmt"
+
+type stack struct {
+	arr         [5]int
+	front, rear int
+}
+
+func enque(s *stack, data int) {
+	if ((s.rear + 1) % 5) == s.front {
+		fmt.Println("que is full")
+	} else if s.rear == -1 && s.front == -1 {
+		s.rear, s.front = 0, 0
+		s.arr[s.rear] = data
+	} else {
+		s.rear++
+		s.arr[s.rear] = data
+	}
+
+}
+
+func deque(s *stack) int {
+	if s.rear == -1 && s.front == -1 {
+		fmt.Println("que is empty")
+	} else if s.rear == s.front {
+		val := s.arr[s.front]
+		s.rear, s.front = -1, -1
+		return val
+	} else {
+		val := s.arr[s.front]
+		s.front = ((s.front + 1) % 5)
+		return val
+	}
+	return 0
+}
+
+func peek(s *stack) {
+	fmt.Println(s.arr[s.front])
+}
+
+func display(s *stack) {
+	for i := s.front; i < s.rear; {
+		fmt.Println(s.arr[i])
+		 i=((i + 1) % 5)
+	}
+	fmt.Println(s.arr[s.rear])
+	fmt.Printf("\n\n")
+}
+
+func main() {
+	st := new(stack)
+	st.front,st.rear = -1,-1
+	enque(st, 2)
+	enque(st, 3)
+	enque(st, 4)
+	enque(st, 5)
+	//fmt.Printf("\n==>%v\t==>%v\n",st.rear,st.front)
+	display(st)
+
+	fmt.Printf("\n==>deque= %d\n", deque(st))
+	fmt.Printf("\n==>deque= %d\n", deque(st))
+	fmt.Printf("\n==>deque= %d\n", deque(st))
+	fmt.Printf("\n==>deque= %d\n", deque(st))
+	fmt.Printf("\n==>deque= %d\n", deque(st))
+	fmt.Printf("\n==>deque= %d\n", deque(st))
+	fmt.Printf("\n==>deque= %d\n", deque(st))
+	enque(st, 6)
+	enque(st, 7)
+	fmt.Printf("\n\n")
+	display(st)
+	peek(st)
+
+}
